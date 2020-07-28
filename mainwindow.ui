@@ -122,6 +122,13 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
+           <widget class="QPushButton" name="deletedataset_button">
+            <property name="text">
+             <string>Delete Dataset</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="editdatasetbutton">
             <property name="text">
              <string>Edit Dataset Settings</string>
