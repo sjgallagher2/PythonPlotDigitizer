@@ -19,6 +19,7 @@ Using the Python Plot Digitizer goes like this:
 
 The following are not yet implemented:
 
+* Browse Image - Select the image graphically that you will use
 * Load CSV Data - Loads a dataset onto the current image from a csv file
 * Delete Dataset - Deletes a dataset
 * Clear Datapoints - Remove all datapoints from a dataset
