@@ -79,6 +79,7 @@ class ApplicationState:
         self.mode = "select_axes" # select_axes, select_datapoint
         self.active_dataset = "default"
         self.workingdir = os.getcwd()
+        self.hide_browse_warning = False
 
 # ImageAxis class
 # Container for coordinates, represents one axis for the image axes
@@ -109,7 +110,7 @@ class ImageAxes:
         # Transformation for mpl -> image
         self.transformation = Transformation() # Default is identity matrix
 
-        self.active_point = "xaxis1" # "xaxis1","xaxis2","yaxis1","yaxis2"
+        self.active_point = "xaxis1" # "xaxis1","xaxis2","yaxis1"
 
     def transform_to_img(self,p1_mpl):
         point = self.transformation.transform(p1_mpl)
@@ -325,10 +326,15 @@ class MainApplication:
         self.win.exportdatabutton.pressed.connect(self.export_data_cb)
         self.win.changeaxbutton.pressed.connect(self.change_ax_cb)
         self.win.editdatasetbutton.pressed.connect(self.edit_dataset_cb)
+        self.win.deletedatasetbutton.pressed.connect(self.delete_dataset_cb)
         self.win.newdatasetbutton.pressed.connect(self.new_dataset_cb)
         self.win.dataset_combo.currentTextChanged.connect(self.select_dataset_cb)
         self.win.logxcheck.stateChanged.connect(self.logx_change_cb)
         self.win.logycheck.stateChanged.connect(self.logy_change_cb)
+        self.win.browse_button.pressed.connect(self.browse_image_cb)
+        self.win.loadcsv_button.pressed.connect(self.browse_csvdata_cb)
+        self.win.cleardata_button.pressed.connect(self.clear_datapoints_cb)
+        self.win.editdata_button.pressed.connect(self.edit_datapoints_cb)
 
 
 
@@ -382,9 +388,6 @@ class MainApplication:
                 self.get_text_popup(event)
             elif self.imgaxes.active_point == "yaxis1":
                 self.imgaxes.yaxis.p1_mpl = Coordinate(event.xdata,event.ydata)
-                self.get_text_popup(event)
-            elif self.imgaxes.active_point == "yaxis2":
-                self.imgaxes.yaxis.p2_mpl = Coordinate(event.xdata,event.ydata)
                 self.state.mode = "select_datapoint" # Change mode
                 self.get_text_popup(event)
             self.imgaxes.plot_axes(self.plotwdg.ax_main,self.plotwdg.fig.canvas)
@@ -396,13 +399,10 @@ class MainApplication:
             elif self.imgaxes.active_point == "yaxis1":
                 self.imgaxes.xaxis.p2_mpl = Coordinate(0,0)
                 self.imgaxes.active_point = "xaxis2"
-            elif self.imgaxes.active_point == "yaxis2":
-                self.imgaxes.yaxis.p1_mpl = Coordinate(0,0)
-                self.imgaxes.active_point = "yaxis1"
             self.imgaxes.plot_axes(self.plotwdg.ax_main,self.plotwdg.fig.canvas)
             self.imgaxes.plot_axes(self.plotwdg.ax_inset,self.plotwdg.fig.canvas,markersize=16)
             
-
+    # Textbox pop up for when the user selects an axes coordinate
     def get_text_popup(self,event):
         ax = self.plotwdg.ax_inset
         fig = self.plotwdg.fig
@@ -420,7 +420,7 @@ class MainApplication:
         self.textbox.setVisible(True)
         self.label_tb.setVisible(True)
 
-
+    # Select datapoint mode handler
     def select_datapoint(self,event):
         active_dataset = self.find_dataset(self.state.active_dataset)
         if event.button == 1:
@@ -430,10 +430,17 @@ class MainApplication:
             active_dataset.plot_dataset(self.plotwdg.ax_inset, \
                     self.plotwdg.fig.canvas,markersize=16)
         elif event.button == 3:
-            active_dataset.undo_append_point()
-            active_dataset.plot_dataset(self.plotwdg.ax_main, self.plotwdg.fig.canvas)
-            active_dataset.plot_dataset(self.plotwdg.ax_inset, \
-                    self.plotwdg.fig.canvas,markersize=16)
+            if len(active_dataset) == 0:
+                self.state.mode = 'select_axes'
+                self.imgaxes.yaxis.p1_mpl = Coordinate(0,0)
+                self.imgaxes.active_point = "yaxis1"
+                self.imgaxes.plot_axes(self.plotwdg.ax_main,self.plotwdg.fig.canvas)
+                self.imgaxes.plot_axes(self.plotwdg.ax_inset,self.plotwdg.fig.canvas,markersize=16)
+            else:
+                active_dataset.undo_append_point()
+                active_dataset.plot_dataset(self.plotwdg.ax_main, self.plotwdg.fig.canvas)
+                active_dataset.plot_dataset(self.plotwdg.ax_inset, \
+                        self.plotwdg.fig.canvas,markersize=16)
 
     def find_dataset(self,label):
         for ds in self.datasets:
@@ -466,13 +473,11 @@ class MainApplication:
     def nudge_axes_coordinates(self,direction):
         # These are all offset by 1, so go to the previous state
         if self.imgaxes.active_point == "xaxis1":
-            p = self.imgaxes.yaxis.p2_mpl
+            p = self.imgaxes.yaxis.p1_mpl
         elif self.imgaxes.active_point == "xaxis2":
             p = self.imgaxes.xaxis.p1_mpl
         elif self.imgaxes.active_point == "yaxis1":
             p = self.imgaxes.xaxis.p2_mpl
-        elif self.imgaxes.active_point == "yaxis2":
-            p = self.imgaxes.yaxis.p1_mpl
 
         if direction=="up":
             p = Coordinate(p.x,p.y-1)
@@ -486,7 +491,7 @@ class MainApplication:
             print("Error: Unknown nudge direction")
 
         if self.imgaxes.active_point == "xaxis1":
-            self.imgaxes.yaxis.p2_mpl = p
+            self.imgaxes.yaxis.p1_mpl = p
             # Need to recalculate matrix
             p1 = self.imgaxes.xaxis.p1_mpl.get_point_homog_vector()
             p2 = self.imgaxes.xaxis.p2_mpl.get_point_homog_vector()
@@ -517,11 +522,10 @@ class MainApplication:
             self.imgaxes.xaxis.p1_mpl = p
         elif self.imgaxes.active_point == "yaxis1":
             self.imgaxes.xaxis.p2_mpl= p
-        elif self.imgaxes.active_point == "yaxis2":
-            self.imgaxes.yaxis.p1_mpl = p
         self.imgaxes.plot_axes(self.plotwdg.ax_main,self.plotwdg.fig.canvas)
         self.imgaxes.plot_axes(self.plotwdg.ax_inset,self.plotwdg.fig.canvas,markersize=16)
-
+    
+    # For coordinate select mode, called after textbox entry is finished (enter is pressed)
     def textbox_finished_cb(self):
         if self.textbox.text() == "":
             return
@@ -537,10 +541,6 @@ class MainApplication:
                 self.imgaxes.active_point = "yaxis1"
             elif self.imgaxes.active_point == "yaxis1":
                 self.imgaxes.yaxis.p1_img = p1
-                self.imgaxes.active_point = "yaxis2"
-            elif self.imgaxes.active_point == "yaxis2":
-                # Get the last point
-                self.imgaxes.yaxis.p2_img = p1
                 self.imgaxes.active_point = "xaxis1"
                 
                 # Now we have the points, we need to check which (if any) axis is log scale
@@ -657,9 +657,10 @@ class MainApplication:
         # s is the string of the newly selected dataset
         self.state.active_dataset = s
         active_dataset = self.get_active_dataset()
-        active_dataset.plot_dataset(self.plotwdg.ax_main, self.plotwdg.fig.canvas)
-        active_dataset.plot_dataset(self.plotwdg.ax_inset, \
-                self.plotwdg.fig.canvas,markersize=16)
+        if active_dataset != None:
+            active_dataset.plot_dataset(self.plotwdg.ax_main, self.plotwdg.fig.canvas)
+            active_dataset.plot_dataset(self.plotwdg.ax_inset, \
+                    self.plotwdg.fig.canvas,markersize=16)
 
     def logx_change_cb(self,i):
         # i is 0 or 2 for unchecked and checked, resp.
@@ -728,6 +729,61 @@ class MainApplication:
             # Now use first 3 points to calculate transformation matrix
             tmat = utils.solve_transformation(p1,p2,p3,p1T,p2T,p3T)
             self.imgaxes.transformation = Transformation(matrix=tmat)
+
+    def browse_image_cb(self):
+        # Issue data loss warning
+        if self.state.hide_browse_warning == False:
+            dlg = QtWidgets.QDialog(self.win)
+            dlg.btnbox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel )
+            dlg.btnbox.accepted.connect(dlg.accept)
+            dlg.btnbox.rejected.connect(dlg.reject)
+            dlg.layout = QtWidgets.QVBoxLayout()
+            dlg.layout.addWidget(QtWidgets.QLabel("Warning: Selecting a new image will erase all datasets. \n\nThis cannot be undone. \n\nContinue?"))
+            dlg.layout.addWidget(dlg.btnbox)
+            dlg.setLayout(dlg.layout)
+
+            choose = dlg.exec_()
+            if not choose:
+                return # If cancelled, stop now
+
+        # Call file browser
+        fname_list = QtWidgets.QFileDialog.getOpenFileName(self.win, \
+            'Open Image',self.state.workingdir+"/",'Image files (*.png *.jpg *.bmp)')
+        fname = fname_list[0]
+        if fname == '': # If cancelled, stop now
+            return
+        
+        # Set the new image data, clear the axes
+        self.image_name = fname
+        self.image_data = ImageFile(fname)
+        self.plotwdg.ax_main.clear()
+        self.plotwdg.ax_inset.clear()
+        self.image_data.plot_image(self.plotwdg.ax_main)
+        self.image_data.plot_image(self.plotwdg.ax_inset)
+        self.plotwdg.ax_main.set_xticks([])
+        self.plotwdg.ax_main.set_yticks([])
+        self.plotwdg.ax_inset.axis('off')
+
+        # Reset program state
+        self.state.mode = "select_axes"
+        self.datasets = np.array([Dataset(DatasetParams("default",markercolor=[0.0,1.0,0.0]),points=[])])
+        self.state.active_dataset = self.datasets[0].label
+        self.win.dataset_combo.clear()
+        self.win.dataset_combo.insertItem(0,self.datasets[0].label)
+        self.win.dataset_combo.setCurrentText(self.datasets[0].label)
+        self.imgaxes = ImageAxes("axes1")
+
+    def delete_dataset_cb(self):
+        pass
+
+    def browse_csvdata_cb(self):
+        pass
+
+    def clear_datapoints_cb(self):
+        pass
+
+    def edit_datapoints_cb(self):
+        pass
 
 
 if __name__ == "__main__":

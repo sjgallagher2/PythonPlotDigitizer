@@ -58,7 +58,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="brows_button">
+           <widget class="QPushButton" name="browse_button">
             <property name="text">
              <string>Browse Image</string>
             </property>
@@ -122,7 +122,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
-           <widget class="QPushButton" name="deletedataset_button">
+           <widget class="QPushButton" name="deletedatasetbutton">
             <property name="text">
              <string>Delete Dataset</string>
             </property>
@@ -169,7 +169,7 @@
           <item row="0" column="0">
            <widget class="QPushButton" name="cleardata_button">
             <property name="text">
-             <string>Clear Datapoints</string>
+             <string>Clear All Datapoints</string>
             </property>
            </widget>
           </item>
