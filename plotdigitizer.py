@@ -774,7 +774,49 @@ class MainApplication:
         self.imgaxes = ImageAxes("axes1")
 
     def delete_dataset_cb(self):
-        pass
+        # Issue data loss warning
+        dlg = QtWidgets.QDialog(self.win)
+        dlg.btnbox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel )
+        dlg.btnbox.accepted.connect(dlg.accept)
+        dlg.btnbox.rejected.connect(dlg.reject)
+        dlg.layout = QtWidgets.QVBoxLayout()
+        dlg.layout.addWidget(QtWidgets.QLabel("Warning: Deleting a dataset will erase all points. \n\nThis cannot be undone. \n\nContinue?"))
+        dlg.layout.addWidget(dlg.btnbox)
+        dlg.setLayout(dlg.layout)
+
+        choose = dlg.exec_()
+        if not choose:
+            return # If cancelled, stop now
+
+        if len(self.datasets) == 1:
+            # Just clean the plot and reset the dataset vector
+            self.datasets[0].points = []
+            self.datasets[0].plot_dataset(self.plotwdg.ax_main, self.plotwdg.fig.canvas)
+            self.datasets[0].plot_dataset(self.plotwdg.ax_inset, \
+                    self.plotwdg.fig.canvas,markersize=16)
+            self.datasets = np.array([Dataset(DatasetParams("default",markercolor=[0.0,1.0,0.0]),points=[])])
+            self.state.active_dataset = self.datasets[0].label
+            self.win.dataset_combo.clear()
+            self.win.dataset_combo.insertItem(0,self.datasets[0].label)
+            self.win.dataset_combo.setCurrentText(self.datasets[0].label)
+
+        else:
+            ds_combo_idx = self.win.dataset_combo.findText(self.state.active_dataset)
+            ds_idx = -1 # Dataset index, for dataset to be deleted
+            for i in range(len(self.datasets)):
+                if self.datasets[i].label == self.state.active_dataset:
+                    ds_idx = i
+            if ds_idx != -1:
+                self.datasets[ds_idx].points = []
+                self.datasets[ds_idx].plot_dataset(self.plotwdg.ax_main, self.plotwdg.fig.canvas)
+                self.datasets[ds_idx].plot_dataset(self.plotwdg.ax_inset, \
+                        self.plotwdg.fig.canvas,markersize=16)
+                self.datasets[ds_idx] = []
+                self.state.active_dataset = self.datasets[0].label
+                self.win.dataset_combo.removeItem(ds_combo_idx)
+            else:
+                print("Error: No active dataset?")
+
 
     def browse_csvdata_cb(self):
         pass
