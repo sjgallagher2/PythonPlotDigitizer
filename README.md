@@ -9,7 +9,7 @@ This is a plot digitizer written in Python using PyQt5 and Matplotlib. With an i
 Using the Python Plot Digitizer goes like this:
 
 * Start up, and load the image using "Browse Image"
-* Choose 4 axes points with their associated plot coordinates (these are usually two points on the x-axis and two points on the y-axis). Coordinates are entered x,y. Left click adds the next point, right click resets the previous point. Use the arrow keys to nudge points around.
+* Choose any 3 points (preferably on the axes and far apart) with their associated plot coordinates. Coordinates are entered "x,y" with the comma. Left click adds the next point, right click resets the previous point. Use the arrow keys to nudge points around.
 * After the coordinate system is set, the transformation is calculated, and you can start adding datapoints. Left-click adds new datapoints, right-click removes the last datapoint, and the arrow keys nudge the most recent datapoint. 
 * You can change the dataset settings to customize the label, marker type, and marker color. You can also add new datasets. 
 
