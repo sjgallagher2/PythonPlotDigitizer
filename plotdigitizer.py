@@ -76,7 +76,7 @@ class ImageFile:
 
 class ApplicationState:
     def __init__(self):
-        self.mode = "select_axes" # select_axes, select_datapoint
+        self.mode = "select_axes" # select_axes, select_datapoint,  or edit_datapoints
         self.active_dataset = "default"
         self.workingdir = os.getcwd()
         self.hide_browse_warning = False
@@ -369,10 +369,10 @@ class MainApplication:
             self.select_axes(event)
         elif self.state.mode == "select_datapoint":
             self.select_datapoint(event)
-        elif self.state.mode == "move_datapoint":
+        elif self.state.mode == "edit_datapoints":
             self.move_datapoint(event)
 
-    def move_datapoint(self,event):
+    def edit_datapoints(self,event):
         pass
 
     def select_axes(self,event):
@@ -822,10 +822,29 @@ class MainApplication:
         pass
 
     def clear_datapoints_cb(self):
-        pass
+        # Issue data loss warning
+        dlg = QtWidgets.QDialog(self.win)
+        dlg.btnbox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel )
+        dlg.btnbox.accepted.connect(dlg.accept)
+        dlg.btnbox.rejected.connect(dlg.reject)
+        dlg.layout = QtWidgets.QVBoxLayout()
+        dlg.layout.addWidget(QtWidgets.QLabel("Warning: Clearing a dataset will erase all points. \n\nThis cannot be undone. \n\nContinue?"))
+        dlg.layout.addWidget(dlg.btnbox)
+        dlg.setLayout(dlg.layout)
+
+        choose = dlg.exec_()
+        if not choose:
+            return # If cancelled, stop now
+        
+        # Clear the points and replot
+        active_dataset = self.get_active_dataset()
+        active_dataset.points = []
+        active_dataset.plot_dataset(self.plotwdg.ax_main, self.plotwdg.fig.canvas)
+        active_dataset.plot_dataset(self.plotwdg.ax_inset, \
+                self.plotwdg.fig.canvas,markersize=16)
 
     def edit_datapoints_cb(self):
-        pass
+        self.state.mode = "edit_datapoints"
 
 
 if __name__ == "__main__":
